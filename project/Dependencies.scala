@@ -31,11 +31,9 @@ object Dependencies {
     val janino             = "3.1.0"
     val logbackJsonEncoder = "6.3"
 
-    val silencer = "1.4.4"
-
-    val kamonCore          = "1.1.6"
-    val kamonInfluxDb      = "1.0.3"
-    val kamonSystemMetrics = "1.0.1"
+    val kamonCore          = "2.1.1"
+    val kamonInfluxDb      = "2.1.1"
+    val kamonSystemMetrics = "2.1.1"
 
     val wavesProtobufSchemas = "1.0.0"
     val wavesJ               = "0.16.0"
@@ -60,11 +58,11 @@ object Dependencies {
     val swagger   = "1.1.1"
     val swaggerUi = "3.24.3"
 
-    val scorexCrypto = "2.1.7"
+    val scorexCrypto = "2.1.8"
 
     val monix = "3.0.0"
 
-    val supertagged = "1.4"
+    val supertagged = "1.5"
 
     val javaLevelDb = "0.12"
     val jniLevelDb  = "1.18.3"
@@ -97,7 +95,7 @@ object Dependencies {
   private val diffx                = "com.softwaremill.diffx" %% "diffx-scalatest" % Version.diffx
   private val catsCore             = catsModule("core")
   private val catsTaglessMacros    = "org.typelevel" %% "cats-tagless-macros" % Version.catsTaglessMacros
-  private val kindProjector        = compilerPlugin("org.spire-math" %% "kind-projector" % Version.kindProjector)
+  private val kindProjector        = compilerPlugin("org.typelevel" %% "kind-projector" % "0.11.0" cross CrossVersion.full)
   private val betterMonadicFor     = compilerPlugin("com.olegpy" %% "better-monadic-for" % Version.betterMonadicFor)
   private val mouse                = "org.typelevel" %% "mouse" % Version.mouse
   private val shapeless            = "com.chuusai" %% "shapeless" % Version.shapeless
@@ -143,11 +141,6 @@ object Dependencies {
     "com.github.julien-truffaut" %% "monocle-macro" % Version.monocle
   )
 
-  private val silencer: Seq[ModuleID] = Seq(
-    compilerPlugin("com.github.ghik" %% "silencer-plugin" % Version.silencer cross CrossVersion.full),
-    "com.github.ghik" %% "silencer-lib" % Version.silencer % Provided cross CrossVersion.full
-  )
-
   private val quill: Seq[ModuleID] = Seq(
     "org.postgresql" % "postgresql"  % Version.postgresql,
     "io.getquill"    %% "quill-jdbc" % Version.quillJdbc
@@ -170,7 +163,7 @@ object Dependencies {
     javaLevelDb
   ) map (_ % Test)
 
-  private val integrationTestKit: Seq[ModuleID] = Seq(wavesJ, logback % Test) ++ testKit ++ silencer
+  private val integrationTestKit: Seq[ModuleID] = Seq(wavesJ, logback % Test) ++ testKit
 
   val globalEnforcedVersions = Def.setting(
     Seq(
@@ -233,9 +226,9 @@ object Dependencies {
       sttpClient,
       wavesJ,
       betterMonadicFor
-    ) ++ testKit ++ quill ++ silencer ++ monocle
+    ) ++ testKit ++ quill ++ monocle
 
-    lazy val dexLoad: Seq[ModuleID] = Seq(diffx, pureConfig) ++ silencer
+    lazy val dexLoad: Seq[ModuleID] = Seq(diffx, pureConfig)
 
     lazy val dexIt: Seq[ModuleID] = integrationTestKit
 
@@ -260,7 +253,7 @@ object Dependencies {
       grpcScalaPb
     )
 
-    lazy val wavesGrpc: Seq[ModuleID] = Seq(wavesProtobufSchemas, grpcScalaPb) ++ silencer
+    lazy val wavesGrpc: Seq[ModuleID] = Seq(wavesProtobufSchemas, grpcScalaPb)
 
     lazy val wavesIntegration: Seq[ModuleID] = Seq(
       julToSlf4j,

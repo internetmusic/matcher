@@ -10,7 +10,6 @@ import cats.instances.future._
 import cats.syntax.either._
 import cats.syntax.option._
 import cats.{Id, catsInstancesForId}
-import com.github.ghik.silencer.silent
 import com.softwaremill.diffx._
 import com.wavesplatform.dex.api.ws.protocol.{WsAddressChanges, WsOrderBookChanges}
 import com.wavesplatform.dex.cli.ScoptImplicits
@@ -23,6 +22,7 @@ import com.wavesplatform.dex.load.ws.WsCollectChangesClient
 import com.wavesplatform.dex.{Version, cli}
 import scopt.{OParser, RenderingMode}
 
+import scala.annotation.nowarn
 import scala.concurrent.duration.{Duration, DurationInt, FiniteDuration}
 import scala.concurrent.{Await, ExecutionContext, Future}
 
@@ -344,7 +344,7 @@ object WavesDexLoadCli extends ScoptImplicits {
   }
 
   // The compiler is lie! This is used in WsOrder.id
-  @silent("never used") private implicit val derivedByteStrDiff: Derived[Diff[ByteStr]] = Derived(getDiff[ByteStr](_.toString == _.toString))
+  @nowarn("never used") private implicit val derivedByteStrDiff: Derived[Diff[ByteStr]] = Derived(getDiff[ByteStr](_.toString == _.toString))
 
   private implicit val wsAddressChangesDiff: Diff[WsAddressChanges]     = Derived[Diff[WsAddressChanges]].ignore(_.timestamp).ignore(_.updateId)
   private implicit val wsOrderBookChangesDiff: Diff[WsOrderBookChanges] = Derived[Diff[WsOrderBookChanges]].ignore(_.timestamp).ignore(_.updateId)

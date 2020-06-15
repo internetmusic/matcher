@@ -97,7 +97,7 @@ lazy val root = (project in file("."))
 
 inScope(Global)(
   Seq(
-    scalaVersion := "2.12.10",
+    scalaVersion := "2.13.2",
     organization := "com.wavesplatform",
     organizationName := "Waves Platform",
     organizationHomepage := Some(url("https://wavesplatform.com")),
@@ -113,7 +113,6 @@ inScope(Global)(
       "-Ywarn-unused:-implicits",
       "-Ywarn-macros:after", // https://github.com/scala/bug/issues/11099
       "-Xlint",
-      "-Ypartial-unification",
       "-opt:l:inline",
       "-opt-inline-from:**",
       "-Yrangepos" // required for scalafix
