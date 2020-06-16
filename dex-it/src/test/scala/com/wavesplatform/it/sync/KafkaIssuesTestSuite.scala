@@ -12,7 +12,7 @@ import com.wavesplatform.dex.it.api.websockets.HasWebSockets
 import com.wavesplatform.dex.model.{LimitOrder, OrderStatus}
 import com.wavesplatform.it.WsSuiteBase
 
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 class KafkaIssuesTestSuite extends WsSuiteBase with HasWebSockets with HasKafka {
 
@@ -71,8 +71,8 @@ class KafkaIssuesTestSuite extends WsSuiteBase with HasWebSockets with HasKafka 
 
     disconnectKafkaFromNetwork()
 
-    dex1.api.tryCancel(alice, sellOrder) shouldBe 'left
-    dex1.api.tryPlace(bigSellOrder) shouldBe 'left
+    dex1.api.tryCancel(alice, sellOrder) shouldBe Symbol("left")
+    dex1.api.tryPlace(bigSellOrder) shouldBe Symbol("left")
 
     dex1.api.reservedBalance(alice) should matchTo(Map[Asset, Long](Waves -> 10.003.waves))
 
@@ -87,7 +87,7 @@ class KafkaIssuesTestSuite extends WsSuiteBase with HasWebSockets with HasKafka 
 
     connectKafkaToNetwork()
 
-    dex1.api.tryCancel(alice, sellOrder) shouldBe 'right
+    dex1.api.tryCancel(alice, sellOrder) shouldBe Symbol("right")
     dex1.api.orderHistory(alice, Some(true)) should have size 0
     dex1.api.reservedBalance(alice) shouldBe empty
 
@@ -95,7 +95,7 @@ class KafkaIssuesTestSuite extends WsSuiteBase with HasWebSockets with HasKafka 
       WsOrder(id = sellOrder.id(), status = OrderStatus.Cancelled.name)
     }
 
-    dex1.api.tryPlace(bigSellOrder) shouldBe 'right
+    dex1.api.tryPlace(bigSellOrder) shouldBe Symbol("right")
     dex1.api.orderHistory(alice, Some(true)) should have size 1
     dex1.api.reservedBalance(alice) should matchTo(Map[Asset, Long](Waves -> 30.003.waves))
 

@@ -7,7 +7,10 @@ import sbt.internal.inc.ReflectUtilities
 Global / resolvers += Resolver.bintrayRepo("ethereum", "maven") // JNI LevelDB
 
 // Scalafix
-scalafixDependencies in ThisBuild += "org.scalatest" %% "autofix" % "3.1.0.0"
+scalafixDependencies in ThisBuild ++= List(
+  "org.scalatest"          %% "autofix"                     % "3.1.0.0",
+  "org.scala-lang.modules" %% "scala-collection-migrations" % "2.1.4"
+)
 addCompilerPlugin(scalafixSemanticdb)
 
 lazy val commonOwaspSettings = Seq(
@@ -49,7 +52,10 @@ lazy val `dex-load` = project
 lazy val `waves-grpc` = project.settings(commonOwaspSettings)
 
 lazy val `waves-ext` = project
-  .settings(commonOwaspSettings)
+  .settings(
+    commonOwaspSettings,
+    crossScalaVersions := List("2.12.10", "2.13.2")
+  )
   .dependsOn(
     `waves-grpc`,
     `dex-test-common` % "test->compile"
@@ -98,6 +104,8 @@ lazy val root = (project in file("."))
 inScope(Global)(
   Seq(
     scalaVersion := "2.13.2",
+    semanticdbEnabled := true,
+    semanticdbVersion := scalafixSemanticdb.revision,
     organization := "com.wavesplatform",
     organizationName := "Waves Platform",
     organizationHomepage := Some(url("https://wavesplatform.com")),
@@ -115,7 +123,8 @@ inScope(Global)(
       "-Xlint",
       "-opt:l:inline",
       "-opt-inline-from:**",
-      "-Yrangepos" // required for scalafix
+      "-Yrangepos", // required for scalafix
+      "-P:semanticdb:synthetics:on"
     ),
     crossPaths := false,
     scalafmtOnCompile := false,

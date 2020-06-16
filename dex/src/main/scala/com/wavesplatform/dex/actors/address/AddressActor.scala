@@ -280,7 +280,7 @@ class AddressActor(owner: Address,
         case Right(spendableBalance) =>
           wsAddressState.sendSnapshot(
             balances = mkWsBalances(spendableBalance),
-            orders = activeOrders.values.map(ao => WsOrder.fromDomain(ao, activeStatus(ao)))(collection.breakOut),
+            orders = activeOrders.values.map(ao => WsOrder.fromDomain(ao, activeStatus(ao))).to(Seq)
           )
           if (!wsAddressState.hasActiveSubscriptions) scheduleNextDiffSending
           wsAddressState = wsAddressState.flushPendingSubscriptions()
@@ -315,11 +315,13 @@ class AddressActor(owner: Address,
   }
 
   private def mkWsBalances(spendableBalances: Map[Asset, Long]): Map[Asset, WsBalances] = {
-    val tradableBalance = spendableBalances |-| openVolume.filterKeys(spendableBalances.keySet)
-    spendableBalances.keySet.map { asset =>
-      val balanceValue: Map[Asset, Long] => Double = source => denormalizeAmountAndFee(source.getOrElse(asset, 0), efc assetDecimals asset).toDouble
-      asset -> WsBalances(balanceValue(tradableBalance), balanceValue(openVolume))
-    }(collection.breakOut)
+    val tradableBalance = spendableBalances |-| openVolume.view.filterKeys(spendableBalances.keySet).toMap
+    spendableBalances.keySet
+      .map { asset =>
+        val balanceValue: Map[Asset, Long] => Double = source => denormalizeAmountAndFee(source.getOrElse(asset, 0), efc assetDecimals asset).toDouble
+        asset -> WsBalances(balanceValue(tradableBalance), balanceValue(openVolume))
+      }
+      .to(Map)
   }
 
   private def isCancelling(id: Order.Id): Boolean = pendingCommands.get(id).exists(_.command.isInstanceOf[Command.CancelOrder])
@@ -363,7 +365,7 @@ class AddressActor(owner: Address,
     spendableBalancesActor
       .ask(SpendableBalancesActor.Query.GetState(owner, forAssets))(5.seconds, self) // TODO replace ask pattern by better solution
       .mapTo[SpendableBalancesActor.Reply.GetState]
-      .map(xs => (xs.state |-| openVolume.filterKeys(forAssets)).withDefaultValue(0L))
+      .map(xs => (xs.state |-| openVolume.view.filterKeys(forAssets).toMap).withDefaultValue(0L))
   }
 
   private def scheduleExpiration(order: Order): Unit = if (enableSchedules && !expiration.contains(order.id())) {
@@ -441,7 +443,7 @@ class AddressActor(owner: Address,
       .sortBy(_.order.timestamp)(Ordering[Long]) // Will cancel newest orders first
       .iterator
       .filter(_.isLimit)
-      .map(ao => (ao.order, ao.requiredBalance filterKeys actualBalance.contains))
+      .map(ao => (ao.order, ao.requiredBalance.view.filterKeys(actualBalance.contains).toMap))
       .foldLeft((actualBalance, Queue.empty[InsufficientBalanceOrder])) {
         case ((restBalance, toDelete), (order, requiredBalance)) =>
           trySubtract(restBalance, requiredBalance) match {

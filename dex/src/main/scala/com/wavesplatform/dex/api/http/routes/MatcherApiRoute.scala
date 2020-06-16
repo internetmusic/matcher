@@ -85,7 +85,7 @@ case class MatcherApiRoute(assetPairBuilder: AssetPairBuilder,
   private type LogicResponseHandler = PartialFunction[Any, ToResponseMarshallable]
 
   private val timer      = Kamon.timer("matcher.api-requests")
-  private val placeTimer = timer.refine("action" -> "place")
+  private val placeTimer = timer.withTag("action", "place")
 
   private def invalidJsonResponse(fields: List[String] = Nil): StandardRoute = complete { InvalidJsonResponse(error.InvalidJson(fields)) }
   private val invalidUserPublicKey: StandardRoute                            = complete { SimpleErrorResponse(StatusCodes.Forbidden, error.UserPublicKeyIsNotValid) }
@@ -327,7 +327,7 @@ case class MatcherApiRoute(assetPairBuilder: AssetPairBuilder,
     )
   )
   def getOrderBook: Route = (path("orderbook" / AssetPairPM) & get) { p =>
-    parameters('depth.as[Int].?) { depth =>
+    parameters(Symbol("depth").as[Int].?) { depth =>
       withAssetPair(p, redirectToInverse = true, depth.fold("")(d => s"?depth=$d")) { pair =>
         complete { orderBookHttpInfo.getHttpView(pair, MatcherModel.Normalized, depth) }
       }
@@ -689,7 +689,7 @@ case class MatcherApiRoute(assetPairBuilder: AssetPairBuilder,
   )
   def getAssetPairAndPublicKeyOrderHistory: Route = (path("orderbook" / AssetPairPM / "publicKey" / PublicKeyPM) & get) { (p, publicKey) =>
     withAssetPair(p, redirectToInverse = true, s"/publicKey/$publicKey") { pair =>
-      parameters(('activeOnly.as[Boolean].?, 'closedOnly.as[Boolean].?)) { (activeOnly, closedOnly) =>
+      parameters((Symbol("activeOnly").as[Boolean].?, Symbol("closedOnly").as[Boolean].?)) { (activeOnly, closedOnly) =>
         signedGet(publicKey) {
           loadOrders(publicKey, Some(pair), getOrderListType(activeOnly, closedOnly, OrderListType.All))
         }
@@ -735,7 +735,7 @@ case class MatcherApiRoute(assetPairBuilder: AssetPairBuilder,
     )
   )
   def getPublicKeyOrderHistory: Route = (path("orderbook" / PublicKeyPM) & get) { publicKey =>
-    parameters(('activeOnly.as[Boolean].?, 'closedOnly.as[Boolean].?)) { (activeOnly, closedOnly) =>
+    parameters((Symbol("activeOnly").as[Boolean].?, Symbol("closedOnly").as[Boolean].?)) { (activeOnly, closedOnly) =>
       signedGet(publicKey) {
         loadOrders(publicKey, None, getOrderListType(activeOnly, closedOnly, OrderListType.All))
       }
@@ -776,7 +776,7 @@ case class MatcherApiRoute(assetPairBuilder: AssetPairBuilder,
     userPublicKey match {
       case Some(upk) if upk.toAddress != address => invalidUserPublicKey
       case _ =>
-        parameters(('activeOnly.as[Boolean].?, 'closedOnly.as[Boolean].?)) { (activeOnly, closedOnly) =>
+        parameters((Symbol("activeOnly").as[Boolean].?, Symbol("closedOnly").as[Boolean].?)) { (activeOnly, closedOnly) =>
           loadOrders(address, None, getOrderListType(activeOnly, closedOnly, OrderListType.ActiveOnly))
         }
     }

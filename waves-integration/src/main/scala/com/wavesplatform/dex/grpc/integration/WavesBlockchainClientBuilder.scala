@@ -22,7 +22,7 @@ object WavesBlockchainClientBuilder extends ScorexLogging {
     val channel =
       wavesBlockchainClientSettings.grpc.toNettyChannelBuilder
         .nameResolverFactory(new DnsNameResolverProvider)
-        .executor(grpcExecutionContext.execute)
+        .executor((command: Runnable) => grpcExecutionContext.execute(command))
         .eventLoopGroup(eventLoopGroup)
         .usePlaintext()
         .build

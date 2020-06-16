@@ -22,12 +22,13 @@ import com.wavesplatform.dex.load.ws.WsCollectChangesClient
 import com.wavesplatform.dex.{Version, cli}
 import scopt.{OParser, RenderingMode}
 
-import scala.annotation.nowarn
 import scala.concurrent.duration.{Duration, DurationInt, FiniteDuration}
 import scala.concurrent.{Await, ExecutionContext, Future}
 
 object WavesDexLoadCli extends ScoptImplicits {
+
   def main(rawArgs: Array[String]): Unit = {
+
     val executor        = Executors.newCachedThreadPool()
     implicit val global = ExecutionContext.fromExecutor(executor)
 
@@ -344,8 +345,7 @@ object WavesDexLoadCli extends ScoptImplicits {
   }
 
   // The compiler is lie! This is used in WsOrder.id
-  @nowarn("never used") private implicit val derivedByteStrDiff: Derived[Diff[ByteStr]] = Derived(getDiff[ByteStr](_.toString == _.toString))
-
+  private implicit val derivedByteStrDiff: Derived[Diff[ByteStr]]       = Derived(getDiff[ByteStr](_.toString == _.toString))
   private implicit val wsAddressChangesDiff: Diff[WsAddressChanges]     = Derived[Diff[WsAddressChanges]].ignore(_.timestamp).ignore(_.updateId)
   private implicit val wsOrderBookChangesDiff: Diff[WsOrderBookChanges] = Derived[Diff[WsOrderBookChanges]].ignore(_.timestamp).ignore(_.updateId)
 

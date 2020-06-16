@@ -6,7 +6,7 @@ resolvers ++= Seq(
 )
 
 Seq(
-  "com.thesamet"       % "sbt-protoc"             % "0.99.28",
+  "com.thesamet"       %% "sbt-protoc"            % "0.99.28",
   "org.jetbrains"      % "sbt-ide-settings"       % "1.0.0",
   "com.typesafe.sbt"   % "sbt-native-packager"    % "1.4.1",
   "pl.project13.scala" % "sbt-jmh"                % "0.3.7",

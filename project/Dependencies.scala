@@ -8,7 +8,7 @@ object Dependencies {
     val akka     = "2.6.5"
     val akkaHttp = "10.1.11"
 
-    val scalaTest          = "3.1.0"
+    val scalaTest          = "3.1.2"
     val scalaCheck         = "1.14.3"
     val scalaTestPlusCheck = "3.1.0.1"
     val scalaMock          = "4.4.0"
@@ -27,13 +27,14 @@ object Dependencies {
     val ficus          = "1.4.7"
 
     val logback            = "1.2.3"
-    val slf4j              = "1.7.30"
+    val slf4j              = "1.7.9"
     val janino             = "3.1.0"
     val logbackJsonEncoder = "6.3"
 
-    val kamonCore          = "2.1.1"
-    val kamonInfluxDb      = "2.1.1"
-    val kamonSystemMetrics = "2.1.1"
+    val silencer = "1.7.0"
+
+    val kamonCore     = "2.1.1"
+    val kamonInfluxDb = "2.1.1"
 
     val wavesProtobufSchemas = "1.0.0"
     val wavesJ               = "0.16.0"
@@ -50,7 +51,7 @@ object Dependencies {
     val testContainersToxiProxy = "1.12.5"
 
     val jackson  = "2.10.0"
-    val playJson = "2.8.1"
+    val playJson = "2.9.0"
 
     val googleGuava = "28.2-jre"
     val kafka       = "2.4.0"
@@ -104,7 +105,7 @@ object Dependencies {
   private val ficus                = "com.iheart" %% "ficus" % Version.ficus
   private val logback              = "ch.qos.logback" % "logback-classic" % Version.logback
   private val logbackJsonEncoder   = "net.logstash.logback" % "logstash-logback-encoder" % Version.logbackJsonEncoder
-  private val slf4j                = "org.slf4j" % "slf4j-api" % Version.slf4j
+  private val slf4j                = "org.slf4j" %% "slf4j-api" % Version.slf4j
   private val julToSlf4j           = "org.slf4j" % "jul-to-slf4j" % Version.slf4j
   private val janino               = "org.codehaus.janino" % "janino" % Version.janino
   private val kamonCore            = kamonModule("core", Version.kamonCore)
@@ -139,6 +140,11 @@ object Dependencies {
   private val monocle: Seq[ModuleID] = Seq(
     "com.github.julien-truffaut" %% "monocle-core"  % Version.monocle,
     "com.github.julien-truffaut" %% "monocle-macro" % Version.monocle
+  )
+
+  private val silencer: Seq[ModuleID] = Seq(
+    compilerPlugin("com.github.ghik" %% "silencer-plugin" % Version.silencer cross CrossVersion.full),
+    "com.github.ghik" %% "silencer-lib" % Version.silencer % Provided cross CrossVersion.full
   )
 
   private val quill: Seq[ModuleID] = Seq(
@@ -216,7 +222,6 @@ object Dependencies {
       jniLevelDb,
       kamonCore,
       kamonModule("influxdb", Version.kamonInfluxDb),
-      kamonModule("system-metrics", Version.kamonSystemMetrics),
       influxDb,
       commonsNet,
       swaggerUi,
@@ -248,12 +253,10 @@ object Dependencies {
     lazy val dexTestCommon: Seq[ModuleID] = Seq(diffx, scalaTest, scalaCheck, scalaTestPlusCheck)
 
     lazy val wavesExt: Seq[ModuleID] = Seq(
-      julToSlf4j,
-      grpcNetty,
-      grpcScalaPb
+      grpcNetty
     )
 
-    lazy val wavesGrpc: Seq[ModuleID] = Seq(wavesProtobufSchemas, grpcScalaPb)
+    lazy val wavesGrpc: Seq[ModuleID] = Seq(wavesProtobufSchemas, grpcScalaPb) ++ silencer
 
     lazy val wavesIntegration: Seq[ModuleID] = Seq(
       julToSlf4j,

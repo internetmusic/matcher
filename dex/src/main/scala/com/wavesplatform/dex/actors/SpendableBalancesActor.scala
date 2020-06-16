@@ -60,7 +60,7 @@ class SpendableBalancesActor(spendableBalances: (Address, Set[Asset]) => Future[
       }
 
       val assets = stateFromNode.keySet ++ knownAssets
-      val result = fullState.getOrElse(address, incompleteStateChanges(address)).filterKeys(assets)
+      val result = fullState.getOrElse(address, incompleteStateChanges(address)).view.filterKeys(assets).toMap
 
       sender ! SpendableBalancesActor.Reply.GetState(result)
 

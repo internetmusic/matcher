@@ -50,8 +50,8 @@ class OrderBookActor(settings: Settings,
   private var lastSavedSnapshotOffset = Option.empty[QueueEventWithMeta.Offset]
   private var lastProcessedOffset     = Option.empty[QueueEventWithMeta.Offset]
 
-  private val addTimer    = Kamon.timer("matcher.orderbook.add").refine("pair" -> assetPair.toString)
-  private val cancelTimer = Kamon.timer("matcher.orderbook.cancel").refine("pair" -> assetPair.toString)
+  private val addTimer    = Kamon.timer("matcher.orderbook.add").withTag("pair", assetPair.toString)
+  private val cancelTimer = Kamon.timer("matcher.orderbook.cancel").withTag("pair", assetPair.toString)
   private var orderBook   = OrderBook.empty
 
   private var actualRule: MatchingRule = normalizeMatchingRule(matchingRules.head)
@@ -160,11 +160,11 @@ class OrderBookActor(settings: Settings,
       if (ref == aggregatedRef) throw new RuntimeException("Aggregated order book was terminated")
   }
 
-  private def process(timestamp: Long, result: (OrderBook, TraversableOnce[Event], LevelAmounts)): Unit = {
+  private def process(timestamp: Long, result: (OrderBook, IterableOnce[Event], LevelAmounts)): Unit = {
     val (updatedOrderBook, events, levelChanges) = result
     orderBook = updatedOrderBook
     // DEX-712
-    val hasTrades = events.exists {
+    val hasTrades = events.iterator.exists {
       case _: Events.OrderExecuted => true
       case _                       => false
     }
@@ -173,7 +173,7 @@ class OrderBookActor(settings: Settings,
     processEvents(events)
   }
 
-  private def processEvents(events: TraversableOnce[Event]): Unit = events.foreach(addressActor ! _.unsafeTap(logEvent))
+  private def processEvents(events: IterableOnce[Event]): Unit = events.iterator.foreach(addressActor ! _.unsafeTap(logEvent))
 
   private def logEvent(e: Event): Unit = log.info {
     import Events._

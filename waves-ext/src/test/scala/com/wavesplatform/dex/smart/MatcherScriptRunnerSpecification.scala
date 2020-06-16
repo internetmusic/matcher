@@ -20,17 +20,18 @@ import scala.util.Try
 
 class MatcherScriptRunnerSpecification extends AnyFreeSpecLike with Matchers {
 
-  private val sampleOrder = OrderV1(
-    sender = KeyPair("test".getBytes()),
-    matcher = PublicKey("matcher".getBytes("utf-8")),
-    pair = AssetPair(Waves, IssuedAsset(ByteStr("asset".getBytes("utf-8")))),
-    orderType = OrderType.BUY,
-    price = 100000000L,
-    amount = 100L,
-    timestamp = 1L,
-    expiration = 1000L,
-    matcherFee = 30000L
-  )
+  private val sampleOrder =
+    OrderV1(
+      sender = KeyPair(ByteStr("test".getBytes())),
+      matcher = PublicKey(ByteStr("matcher".getBytes("utf-8"))),
+      pair = AssetPair(Waves, IssuedAsset(ByteStr("asset".getBytes("utf-8")))),
+      orderType = OrderType.BUY,
+      price = 100000000L,
+      amount = 100L,
+      timestamp = 1L,
+      expiration = 1000L,
+      matcherFee = 30000L
+    )
 
   private def run(script: Script): (Log[Id], Either[String, Terms.EVALUATED]) = MatcherScriptRunner(script, sampleOrder)
 

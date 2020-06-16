@@ -65,7 +65,9 @@ class WavesBlockchainGrpcAsyncClient(eventLoopGroup: EventLoopGroup, channel: Ma
     balanceChangesResponse.batch
       .map { toVanilla }
       .groupBy { case (address, _, _) => address }
-      .mapValues { _.map { case (_, asset, balance) => asset -> balance }.toMap.withDefaultValue(0) }
+      .view
+      .mapValues { _.map { case (_, asset, balance) => asset -> balance }.toMap.withDefaultValue(0L) }
+      .toMap
   }
 
   // TODO remove after release 2.1.2
