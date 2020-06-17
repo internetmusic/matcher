@@ -19,6 +19,8 @@ import scala.util.Random
 
 package object utils {
 
+  import pureconfig.generic.auto._
+
   val settings =
     ConfigSource
       .fromConfig(ConfigFactory.parseResources(scala.util.Properties.envOrElse("CONF", "devnet.conf")).getConfig("waves.dex.load"))

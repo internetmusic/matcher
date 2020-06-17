@@ -52,10 +52,7 @@ lazy val `dex-load` = project
 lazy val `waves-grpc` = project.settings(commonOwaspSettings)
 
 lazy val `waves-ext` = project
-  .settings(
-    commonOwaspSettings,
-    crossScalaVersions := List("2.12.10", "2.13.2")
-  )
+  .settings(commonOwaspSettings)
   .dependsOn(
     `waves-grpc`,
     `dex-test-common` % "test->compile"
