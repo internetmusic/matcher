@@ -5,7 +5,6 @@ import java.util.concurrent.ConcurrentHashMap
 
 import cats.syntax.either._
 import cats.syntax.monoid._
-import com.google.protobuf.ByteString
 import com.google.protobuf.empty.Empty
 import com.wavesplatform.account.Address
 import com.wavesplatform.dex.grpc.integration._
@@ -19,6 +18,7 @@ import com.wavesplatform.features.FeatureProvider._
 import com.wavesplatform.lang.ValidationError
 import com.wavesplatform.lang.v1.compiler.Terms
 import com.wavesplatform.lang.v1.compiler.Terms.{FALSE, TRUE}
+import com.wavesplatform.state.{LeaseBalance, Portfolio}
 import com.wavesplatform.transaction.Asset
 import com.wavesplatform.transaction.Asset.{IssuedAsset, Waves}
 import com.wavesplatform.transaction.TxValidationError.GenericError
@@ -32,6 +32,7 @@ import shapeless.Coproduct
 
 import scala.concurrent.Future
 import scala.concurrent.duration.FiniteDuration
+import scala.util.Try
 import scala.util.control.NonFatal
 
 // TODO remove balanceChangesBatchLingerMs parameter after release 2.1.2
@@ -144,7 +145,7 @@ class WavesBlockchainApiGrpcService(context: ExtensionContext, balanceChangesBat
     val gRpcDesc = desc.fold[MaybeDescription](MaybeDescription.Empty) { desc =>
       MaybeDescription.Description(
         AssetDescription(
-          name = ByteString.copyFrom(desc.name),
+          name = desc.name,
           decimals = desc.decimals,
           hasScript = desc.script.nonEmpty
         )
@@ -164,21 +165,28 @@ class WavesBlockchainApiGrpcService(context: ExtensionContext, balanceChangesBat
     val asset = IssuedAsset(request.assetId.toVanilla)
     val r = context.blockchain.assetScript(asset) match {
       case None => Result.Empty
-      case Some(script) =>
+      case Some((script, _)) =>
         val tx = request.transaction
           .getOrElse(throw new IllegalArgumentException("Expected a transaction"))
           .toVanilla
           .getOrElse(throw new IllegalArgumentException("Can't parse the transaction"))
-        parseScriptResult(ScriptRunner(context.blockchain.height, Coproduct(tx), context.blockchain, script, isAssetScript = true, asset.id)._2)
+        parseScriptResult(
+          ScriptRunner(
+            in = Coproduct(tx),
+            blockchain = context.blockchain,
+            script = script,
+            isAssetScript = true,
+            scriptContainerAddress = asset.id
+          )._2)
     }
     RunScriptResponse(r)
   }
 
   override def hasAddressScript(request: HasAddressScriptRequest): Future[HasScriptResponse] = Future {
     Address
-      .fromBytes(request.address.toVanilla)
+      .fromBytes(request.address.toVanilla.arr) // TODO chainId
       .map { addr =>
-        HasScriptResponse(has = context.blockchain.hasScript(addr))
+        HasScriptResponse(has = context.blockchain.hasAccountScript(addr))
       }
       .explicitGetErr()
   }
@@ -186,12 +194,12 @@ class WavesBlockchainApiGrpcService(context: ExtensionContext, balanceChangesBat
   override def runAddressScript(request: RunAddressScriptRequest): Future[RunScriptResponse] = Future {
     import RunScriptResponse._
 
-    val address = Address.fromBytes(request.address.toVanilla).explicitGetErr()
+    val address = Address.fromBytes(request.address.toVanilla.arr).explicitGetErr() // TODO chainId
     val r = context.blockchain.accountScript(address) match {
       case None => Result.Empty
-      case Some(script) =>
+      case Some(scriptInfo) =>
         val order = request.order.map(_.toVanilla).getOrElse(throw new IllegalArgumentException("Expected an order"))
-        parseScriptResult(MatcherScriptRunner(script, order)._2)
+        parseScriptResult(MatcherScriptRunner(scriptInfo.script, order)._2)
     }
 
     RunScriptResponse(r)
@@ -199,14 +207,14 @@ class WavesBlockchainApiGrpcService(context: ExtensionContext, balanceChangesBat
 
   // TODO remove after release 2.1.3
   override def spendableAssetBalance(request: SpendableAssetBalanceRequest): Future[SpendableAssetBalanceResponse] = Future {
-    val addr    = Address.fromBytes(request.address.toVanilla).explicitGetErr()
+    val addr    = Address.fromBytes(request.address.toVanilla.arr).explicitGetErr() // TODO chainId
     val assetId = request.assetId.toVanillaAsset
     SpendableAssetBalanceResponse(context.utx.spendableBalance(addr, assetId))
   }
 
   override def spendableAssetsBalances(request: SpendableAssetsBalancesRequest): Future[SpendableAssetsBalancesResponse] = Future {
 
-    val address = Address.fromBytes(request.address.toVanilla).explicitGetErr()
+    val address = Address.fromBytes(request.address.toVanilla.arr).explicitGetErr() // TODO chainId
 
     val assetsBalances =
       request.assetIds.map { requestedAssetRecord =>
@@ -260,24 +268,20 @@ class WavesBlockchainApiGrpcService(context: ExtensionContext, balanceChangesBat
   }
 
   override def allAssetsSpendableBalance(request: AddressRequest): Future[AllAssetsSpendableBalanceResponse] = {
-    import com.wavesplatform.state.Portfolio.monoid
-    Future {
-
-      val address              = request.address.toVanillaAddress
-      val pessimisticPortfolio = context.blockchain.portfolio(address) |+| context.utx.pessimisticPortfolio(address)
-
-      val pessimisticPortfolioNonZeroBalances = {
-        if (pessimisticPortfolio.balance == 0) pessimisticPortfolio.assets
-        else pessimisticPortfolio.assets ++ Map(Waves -> pessimisticPortfolio.balance)
-      }
-
-      AllAssetsSpendableBalanceResponse(
-        pessimisticPortfolioNonZeroBalances.map {
-          case (a, b) => AllAssetsSpendableBalanceResponse.Record(a.toPB, b)
-        }.toSeq
-      )
+    for {
+      address       <- Task.fromTry(Try(request.address.toVanillaAddress))
+      assetBalances <- context.accountsApi.portfolio(address).toListL
+    } yield {
+      val balanceDetails = context.accountsApi.balanceDetails(address)
+      // TODO use Map
+      val portfolio   = Portfolio(balanceDetails.available, LeaseBalance(balanceDetails.leaseIn, balanceDetails.leaseOut), assetBalances.toMap)
+      val pessimistic = context.utx.pessimisticPortfolio(address)
+      val corrected   = portfolio |+| pessimistic
+      val nonZero     = if (corrected.balance == 0) corrected.assets else corrected.assets ++ Map(Waves -> corrected.balance)
+      val r           = nonZero.map { case (a, b) => AllAssetsSpendableBalanceResponse.Record(a.toPB, b) }.toSeq
+      AllAssetsSpendableBalanceResponse(r)
     }
-  }
+  }.runToFuture
 
   override def getNodeAddress(request: Empty): Future[NodeAddressResponse] = Future {
     NodeAddressResponse(InetAddress.getLocalHost.getHostAddress)
